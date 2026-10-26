@@ -1,27 +1,21 @@
-# Harsh Industries Recon Mk I — browser PWA prototype
+# Harsh Industries Recon Mk I — HUD 3.0
 
-## Included
-- Responsive blue HUD
-- Camera preview (HTTPS + permission required)
-- COCO-SSD object detection through TensorFlow.js (internet needed to load model)
-- Browser text-to-speech with an en-GB setting (device voice, not an actor imitation)
-- Voice commands where browser speech recognition is supported
-- Interactive rotating wireframe mannequin demo
-- PWA manifest and service worker
+A phone-friendly JARVIS-inspired web HUD prototype.
 
-## Important limits
-- The mannequin is **not** a scan of a person.
-- Real multi-view 3D body reconstruction is not implemented; it needs a suitable reconstruction model and compute plan.
-- This is a PWA, not a signed APK. Installability depends on HTTPS hosting and browser/device support.
-- External libraries load from CDNs. Speech recognition support varies by browser and may use a browser/vendor service.
-- The app code does not upload camera frames, but external libraries and browser speech services have their own privacy behavior.
+## What changed in HUD 3.0
+- Brighter electric-cyan palette and stronger glow.
+- Animated floating-looking holographic data cards, waveform bars, motion-vector graphic, scanning sweep and technical grid.
+- Reworked 3D visualization into a more proportioned human-shaped cyan mesh with torso, pelvis, limbs, joints, contour rings and drag-to-rotate interaction.
+- Service-worker cache version bumped to `hi-recon-mk1-v4` so the updated files are not held behind the previous cache.
 
-## Deploy
-Upload all files to a static HTTPS host. Then open the hosted URL in Chrome on Android and use the browser menu to install/add to home screen if offered. Opening index.html directly from a file manager may block camera access and ES modules.
+## Important limitations
+- The 3D figure is procedurally drawn and stylized; it is **not** an anatomical-grade model or a real body scan.
+- Camera-based object detection uses TensorFlow.js / COCO-SSD from external CDNs and requires internet access and camera permission.
+- Browser speech recognition support varies by browser/device. Text-to-speech uses the available system voice; no exact movie voice is included.
+- Holographic panels are visual effects on the phone screen, not true free-floating holograms.
+- This package has not been tested on every phone/browser.
 
-## Commands
-“start camera”, “stop camera”, “scan objects”, “show 3D model”, “status report”.
+## Publish
+Upload the contents of this folder to the root of the existing GitHub Pages repository, replacing files with the same names, then commit. Keep all seven files at the repository root. Wait for GitHub Pages to publish, close the old site tab, and reopen it.
 
-
-## HUD visual refresh
-This build adds a brighter cyan/ice-blue interface, animated scan sweep, luminous glass-like panels, HUD corner marks, and a more energetic JARVIS core. These are screen-based visual effects, not a physical hologram. The 3D mannequin remains a procedural demo rather than a real body scan.
+Voice update: prefers an available British English voice with a masculine-sounding name and uses a slower, lower-pitched delivery. Actual voice options depend on the Android/browser text-to-speech engine; this does not reproduce or clone Paul Bettany’s voice.

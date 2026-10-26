@@ -1,12 +1,12 @@
 {
-  "name": "HI RECON Mk I",
-  "short_name": "HI RECON",
+  "name": "Harsh Industries Recon Mk I \u2014 JARVIS HUD 3.0",
+  "short_name": "HI RECON Mk I",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#050b13",
-  "theme_color": "#06111f",
-  "description": "Harsh Industries experimental HUD prototype",
+  "background_color": "#01070c",
+  "theme_color": "#00dff5",
+  "description": "Cyan holographic-style HUD prototype with animated interface panels and a stylized human-shaped 3D mesh.",
   "icons": [
     {
       "src": "icon.svg",
