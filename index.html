@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06111f"><link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="style.css"><title>HI RECON Mk I | Harsh Industries</title></head>
+<body><header><b>HI <span>/ RECON</span></b><small id="sys">SYSTEM STANDBY</small><button id="voice">🎙 VOICE</button></header>
+<main><section class="hero"><small>HARSH INDUSTRIES · FIELD SYSTEMS</small><h1>HI RECON <span>MK I</span></h1><p>PERSONAL RECONNAISSANCE INTERFACE</p></section>
+<div class="grid">
+<section class="panel"><h2>01 / OPTICAL FEED <small id="camState">CAMERA OFFLINE</small></h2><div class="feed"><video id="video" autoplay playsinline muted></video><canvas id="overlay"></canvas><div id="placeholder">＋<p>OPTICAL SENSOR STANDBY</p></div></div><button id="camera">ACTIVATE CAMERA</button><button id="detect" disabled>DETECT OBJECTS</button><p class="note">Camera permission required. Detection model loads from the internet.</p><div id="detections">No objects detected yet.</div></section>
+<section class="panel"><h2>02 / J.A.R.V.I.S. <small>VOICE INTERFACE</small></h2><div class="core"><i></i><b>J<span>.</span></b></div><div id="state">AWAITING INPUT</div><p id="message">Good day. JARVIS interface is online.</p><button id="speak">JARVIS SPEAK</button><button id="listen">LISTEN FOR COMMAND</button><p class="note">Commands: start camera · stop camera · scan objects · show 3D model · status report</p></section>
+<section class="panel"><h2>03 / SPATIAL DISPLAY <small>3D VIEWER</small></h2><div class="model"><label>DEMO MANNEQUIN · NOT A SCAN</label><canvas id="three"></canvas></div><button id="rotate">PAUSE ROTATION</button><button id="reset">RESET VIEW</button><p class="note">This procedural mannequin is only a viewer demo, not a reconstruction of a real person.</p></section>
+<section class="panel"><h2>04 / SYSTEM LOG <small>LOCAL SESSION</small></h2><div id="log"></div><button id="clear">CLEAR LOG</button></section>
+</div><footer>HI SYSTEMS // MK I PROTOTYPE <span>BUILD 0.1.0</span></footer></main>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script><script type="module" src="app.js"></script></body></html>
