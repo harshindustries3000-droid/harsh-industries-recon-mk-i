@@ -1,4 +1,4 @@
-# HI RECON Mk I — browser PWA prototype
+# Harsh Industries Recon Mk I — browser PWA prototype
 
 ## Included
 - Responsive blue HUD
@@ -21,3 +21,7 @@ Upload all files to a static HTTPS host. Then open the hosted URL in Chrome on A
 
 ## Commands
 “start camera”, “stop camera”, “scan objects”, “show 3D model”, “status report”.
+
+
+## HUD visual refresh
+This build adds a brighter cyan/ice-blue interface, animated scan sweep, luminous glass-like panels, HUD corner marks, and a more energetic JARVIS core. These are screen-based visual effects, not a physical hologram. The 3D mannequin remains a procedural demo rather than a real body scan.
