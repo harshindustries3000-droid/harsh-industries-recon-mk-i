@@ -1,21 +1,15 @@
-# Harsh Industries Recon Mk I — HUD 3.0
+# H.I. Recon Mk I — 5-feature upgrade pack
 
-A phone-friendly JARVIS-inspired web HUD prototype.
+Replace the files in the root of the existing GitHub repository with these files, then commit the changes. Do not upload the ZIP itself.
 
-## What changed in HUD 3.0
-- Brighter electric-cyan palette and stronger glow.
-- Animated floating-looking holographic data cards, waveform bars, motion-vector graphic, scanning sweep and technical grid.
-- Reworked 3D visualization into a more proportioned human-shaped cyan mesh with torso, pelvis, limbs, joints, contour rings and drag-to-rotate interaction.
-- Service-worker cache version bumped to `hi-recon-mk1-v4` so the updated files are not held behind the previous cache.
+Repository: https://github.com/HarshIndustries3000-droid/harsh-industries-recon-mk-i
 
-## Important limitations
-- The 3D figure is procedurally drawn and stylized; it is **not** an anatomical-grade model or a real body scan.
-- Camera-based object detection uses TensorFlow.js / COCO-SSD from external CDNs and requires internet access and camera permission.
-- Browser speech recognition support varies by browser/device. Text-to-speech uses the available system voice; no exact movie voice is included.
-- Holographic panels are visual effects on the phone screen, not true free-floating holograms.
-- This package has not been tested on every phone/browser.
+## Features
+1. JARVIS voice/text interaction, scan summaries, and general explanations.
+2. Full-screen Visual Intellect camera-analysis HUD with detected names, confidence percentages, common-use notes, and JARVIS briefing.
+3. Compact square H.I. arc-reactor logo in the header and analysis screen.
+4. Rotatable stylized 3D human-shaped visualization with pause/reset controls.
+5. Lock controls and draggable panels on wider screens, with mobile-responsive layout.
 
-## Publish
-Upload the contents of this folder to the root of the existing GitHub Pages repository, replacing files with the same names, then commit. Keep all seven files at the repository root. Wait for GitHub Pages to publish, close the old site tab, and reopen it.
-
-Voice update: prefers an available British English voice with a masculine-sounding name and uses a slower, lower-pitched delivery. Actual voice options depend on the Android/browser text-to-speech engine; this does not reproduce or clone Paul Bettany’s voice.
+## Limitations
+Camera detection requires HTTPS, permission, and internet access to load TensorFlow.js/COCO-SSD. The service worker caches the same-origin site shell only; the external vision libraries still require internet. Labels are predictions and may be wrong. Browser speech recognition varies. The 3D body is made from simple geometry; it is not a real body scan, complete anatomical model, or medical tool.

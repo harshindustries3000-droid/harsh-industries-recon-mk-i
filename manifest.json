@@ -1,18 +1,1 @@
-{
-  "name": "Harsh Industries Recon Mk I \u2014 JARVIS HUD 3.0",
-  "short_name": "HI RECON Mk I",
-  "start_url": "./",
-  "scope": "./",
-  "display": "standalone",
-  "background_color": "#01070c",
-  "theme_color": "#00dff5",
-  "description": "Cyan holographic-style HUD prototype with animated interface panels and a stylized human-shaped 3D mesh.",
-  "icons": [
-    {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
-}
+{"name":"Harsh Industries Recon Mk I","short_name":"HI Recon","start_url":"./","display":"standalone","background_color":"#02090f","theme_color":"#02090f","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}

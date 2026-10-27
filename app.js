@@ -1,89 +1,31 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js';
-const $=id=>document.getElementById(id), logBox=$('log');
-function log(s){let d=document.createElement('div');d.className='logline';d.textContent=new Date().toLocaleTimeString()+' · '+s;logBox.prepend(d)}
-// Prefer a refined British English voice with a masculine-sounding timbre when the device offers one.
-// Browser voice names and gender metadata vary by Android device; this cannot guarantee a particular actor's voice.
-let jarvisVoice=null;
-function chooseJarvisVoice(){
- if(!('speechSynthesis' in window))return;
- const voices=speechSynthesis.getVoices();
- const english=voices.filter(v=>/^en(-|_)/i.test(v.lang));
- const british=english.filter(v=>/^en(-|_)GB/i.test(v.lang));
- const pool=british.length?british:english;
- const preferred=pool.find(v=>/\b(male|daniel|arthur|george|oliver|ryan|brian|alfie|oliver|rishi|google uk english male)\b/i.test(v.name));
- jarvisVoice=preferred||pool.find(v=>/natural|enhanced|premium/i.test(v.name))||pool[0]||voices[0]||null;
+const $=id=>document.getElementById(id),logBox=$('log');function log(s){let d=document.createElement('div');d.className='logline';d.textContent=new Date().toLocaleTimeString()+' · '+s;logBox.prepend(d)}
+let stream=null,model=null,last=[],brief='No object analysis has been run yet.',voice=null;
+function chooseVoice(){if(!('speechSynthesis'in window))return;let vs=speechSynthesis.getVoices(),en=vs.filter(v=>/^en/i.test(v.lang));voice=en.find(v=>/daniel|arthur|george|oliver|natural/i.test(v.name))||en[0]||vs[0]}
+if('speechSynthesis'in window){chooseVoice();speechSynthesis.addEventListener?.('voiceschanged',chooseVoice)}
+function say(s){$('message').textContent=s;$('state').textContent='JARVIS RESPONDING';log('JARVIS: '+s);if('speechSynthesis'in window){speechSynthesis.cancel();chooseVoice();let u=new SpeechSynthesisUtterance(s);u.lang='en-GB';if(voice)u.voice=voice;u.rate=.9;u.pitch=.82;u.onend=()=>$('state').textContent='AWAITING INPUT';speechSynthesis.speak(u)}}
+const use={person:'A person is commonly associated with everyday activity, work, or communication. This model does not identify who the person is.',bottle:'A bottle commonly stores and carries liquids; the contents cannot be confirmed from the image.',cup:'A cup is commonly used to hold drinks; its contents are unknown.',cellphone:'A cellphone supports calls, messages, photography, navigation, and apps.',laptop:'A laptop is a portable computer for work, study, and communication.',keyboard:'A keyboard is an input device used to type text and commands.',mouse:'A computer mouse controls a pointer and helps navigate a screen.',book:'A book stores printed information and is used for reading or study.',chair:'A chair provides a place to sit.',dog:'A dog is a domesticated animal; this is only a predicted category.',cat:'A cat is a domesticated animal; this is only a predicted category.',car:'A car is a road vehicle used for transport.',bicycle:'A bicycle is used for transport or recreation.',potted plant:'A potted plant is grown in a container for gardening or decoration.',remote:'A remote control sends commands to compatible electronic devices.',backpack:'A backpack carries books, equipment, or personal items.'};
+function explain(n){return use[n.toLowerCase()]||`The vision model predicts “${n}”. The exact purpose of this item may depend on its type; the image alone cannot confirm every detail.`}
+function summary(){if(!last.length)return 'I did not confidently recognise an object in this frame. Try better lighting, centre the object, and analyse again.';let names=[...new Set(last.map(x=>x.class))];return `Visual analysis found ${last.length} detection(s): ${names.join(', ')}. These are predictions, not guaranteed facts. ${names.slice(0,4).map(n=>n+': '+explain(n)).join(' ')}`}
+function boxes(v,c,ps){if(!v.videoWidth)return;c.width=v.videoWidth;c.height=v.videoHeight;let x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);x.lineWidth=3;x.font=`${Math.max(14,c.width/45)}px monospace`;x.strokeStyle='#61f5ff';for(let p of ps){let [a,b,w,h]=p.bbox;x.strokeRect(a,b,w,h);let t=p.class.toUpperCase()+' '+Math.round(p.score*100)+'%';x.fillStyle='#04212be8';x.fillRect(a,Math.max(0,b-25),x.measureText(t).width+12,23);x.fillStyle='#8df8ff';x.fillText(t,a+6,Math.max(16,b-9))}}
+async function start(){try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('video').srcObject=stream;$('bigVideo').srcObject=stream;await $('video').play();$('placeholder').hidden=true;$('camera').textContent='STOP FEED';$('detect').disabled=false;$('metric').textContent='ONLINE';$('sys').textContent='OPTICAL FEED ACTIVE';log('Camera online.');say('Optical feed is online. I am ready to analyse visible objects.');if(!model){try{model=await cocoSsd.load();$('detections').textContent='Model ready. Press Analyse.';log('Vision model ready.')}catch(e){say('The vision model could not load. Check the internet connection.')}}}catch(e){log('Camera error: '+e.message);say('Camera access failed. Allow camera permission and use the HTTPS hosted site.')}}
+function stop(){stream?.getTracks().forEach(t=>t.stop());stream=null;$('video').srcObject=null;$('bigVideo').srcObject=null;$('camera').textContent='ACTIVATE FEED';$('detect').disabled=true;$('placeholder').hidden=false;$('metric').textContent='STANDBY';$('sys').textContent='SYSTEM STANDBY';log('Camera stopped.')}
+async function detect(){if(!stream){say('Activate the camera first.');return}if(!model){say('The vision model is not ready yet. Check internet and retry.');return}try{last=(await model.detect($('video'))).filter(p=>p.score>.42).sort((a,b)=>b.score-a.score).slice(0,12);boxes($('video'),$('overlay'),last);boxes($('bigVideo'),$('bigOverlay'),last);$('detections').textContent=last.length?last.map(p=>p.class+' '+Math.round(p.score*100)+'%').join(' · '):'No confident objects detected.';$('count').textContent=last.length+' ITEMS';let root=$('cards');root.replaceChildren();if(!last.length)root.textContent='No confident object predictions. Try improving lighting.';for(let p of last){let card=document.createElement('div');card.className='obj';let b=document.createElement('b');b.textContent=p.class;let conf=document.createElement('span');conf.textContent='MODEL CONFIDENCE: '+Math.round(p.score*100)+'%';let d=document.createElement('p');d.textContent=explain(p.class);card.append(b,conf,d);root.append(card)}brief=summary();$('brief').textContent=brief;log('Analysis completed: '+last.length+' object(s).');say(brief)}catch(e){log('Analysis error: '+e.message);say('Object analysis failed. Try again with the feed visible.')}}
+$('camera').onclick=()=>stream?stop():start();$('detect').onclick=detect;$('expand').onclick=()=>{if(!stream){say('Activate the camera before opening Visual Intellect.');return}$('analysis').classList.add('open');$('bigVideo').play().catch(()=>{});log('Full Visual Intellect screen opened.')};$('close').onclick=()=>$('analysis').classList.remove('open');$('explain').onclick=()=>say(brief);$('speak').onclick=()=>say(last.length?brief:'Good day, Harsh. Recon Mark One is online. Activate the camera to analyse objects, or ask me for system status.');
+function respond(q){let s=q.toLowerCase();if(/start camera|activate camera|open camera/.test(s)){stream? say('Camera is already active.'):start()}else if(/stop camera|close camera/.test(s)){stop();say('Optical feed stopped.')}else if(/scan|analyse|analyze|detect|objects/.test(s)){detect()}else if(/explain|results|what.*see|tell me/.test(s)){say(brief)}else if(/body|anatom|3d|model/.test(s)){ $('bodyPanel').scrollIntoView({behavior:'smooth',block:'center'});say('The centre chamber shows a stylized, rotatable human-shaped model. It is generated geometry, not a real body scan or medical model.')}else if(/status|system report/.test(s)){say(`System report. Camera ${stream?'online':'offline'}. Vision model ${model?'ready':'not loaded'}. Latest detections: ${last.length}. 3D body visualization is illustrative.`)}else if(/hello|hi jarvis|good morning/.test(s)){say('Hello, Harsh. Systems are standing by. Ask me to explain scan results, common object uses, or status.')}else if(/help|what can you do/.test(s)){say('I can activate the camera, analyse visible objects, explain predicted labels and common uses, describe the 3D model, and report status. Predictions may be wrong.')}else{say('I can help explain the current scan, common uses of recognised objects, camera controls, the 3D model, or system status.')}} 
+function listen(){let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){say('Voice recognition is not supported here. Use the text box or buttons.');return}let r=new SR();r.lang='en-IN';r.onresult=e=>{let q=e.results[0][0].transcript;log('Voice input: '+q);respond(q)};r.onerror=e=>log('Voice recognition issue: '+e.error);r.start();$('state').textContent='LISTENING'}
+$('voice').onclick=listen;$('listen').onclick=listen;$('send').onclick=()=>{let q=$('ask').value.trim();if(q){$('ask').value='';respond(q)}};$('ask').addEventListener('keydown',e=>{if(e.key==='Enter')$('send').click()});$('clear').onclick=()=>logBox.replaceChildren();
+$('explainBody').onclick=()=>{let s='This is a generated educational 3D figure built from simple geometric shapes. It is not a real scan, complete anatomical model, medical image, or diagnostic tool.';$('bodyInfo').textContent=s;say(s)};$('bodyFocus').onclick=()=>$('three').scrollIntoView({behavior:'smooth',block:'center'});
+document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>document.getElementById(b.dataset.go).scrollIntoView({behavior:'smooth',block:'center'}));
+let locks={};document.querySelectorAll('[data-lock]').forEach(b=>b.onclick=()=>{let id=b.dataset.lock;locks[id]=!locks[id];b.classList.toggle('locked',locks[id]);b.textContent=locks[id]?'LOCKED':'LOCK';b.closest('.movable').classList.toggle('is-locked',locks[id]);log(id.toUpperCase()+' panel '+(locks[id]?'locked':'unlocked'))});
+document.querySelectorAll('.movable').forEach(p=>{let h=p.querySelector('h2'),drag=null;h.addEventListener('pointerdown',e=>{if(e.target.closest('button')||locks[p.dataset.panel]||innerWidth<900)return;drag={x:e.clientX,y:e.clientY};p.classList.add('dragging')});h.addEventListener('pointermove',e=>{if(drag)p.style.transform=`translate(${e.clientX-drag.x}px,${e.clientY-drag.y}px)`});h.addEventListener('pointerup',()=>{drag=null;p.classList.remove('dragging')});h.addEventListener('pointercancel',()=>{drag=null;p.classList.remove('dragging')})});document.addEventListener('keydown',e=>{if(e.key==='Escape')$('analysis').classList.remove('open')});
+try{const cv=$('three'),renderer=new THREE.WebGLRenderer({canvas:cv,alpha:true,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(35,1,.1,100);cam.position.set(0,.3,7);cam.lookAt(0,0,0);scene.add(new THREE.AmbientLight(0x9af5ff,1.5));let light=new THREE.PointLight(0x32dfff,3,20);light.position.set(3,3,4);scene.add(light);let group=new THREE.Group();scene.add(group);let mat=new THREE.MeshStandardMaterial({color:0x25cde5,emissive:0x063e50,wireframe:true,transparent:true,opacity:.8});function ball(x,y,z,a,b,c,m=mat){let o=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),m);o.position.set(x,y,z);o.scale.set(a,b,c);group.add(o)}function limb(a,b,r1,r2){let A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),d=B.clone().sub(A),o=new THREE.Mesh(new THREE.CylinderGeometry(r2,r1,d.length(),10,1,true),mat);o.position.copy(A).add(B).multiplyScalar(.5);o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());group.add(o);ball(...a,r1,r1,r1);ball(...b,r2,r2,r2)}ball(0,1.25,0,.25,.32,.23);ball(0,.75,0,.45,.5,.23);ball(0,.15,0,.34,.25,.2);ball(0,.82,0,.56,.27,.24);limb([-.6,.82,0],[-.8,.25,0],.15,.11);limb([-.8,.25,0],[-.9,-.28,0],.11,.08);limb([.6,.82,0],[.8,.25,0],.15,.11);limb([.8,.25,0],[.9,-.28,0],.11,.08);limb([-.2,.1,0],[-.24,-.55,0],.18,.13);limb([-.24,-.55,0],[-.28,-1.15,0],.13,.08);limb([.2,.1,0],[.24,-.55,0],.18,.13);limb([.24,-.55,0],[.28,-1.15,0],.13,.08);let heart=new THREE.MeshBasicMaterial({color:0x8afaff,wireframe:true});ball(-.1,.77,.2,.1,.12,.08,heart);let rot=true,drag=null;function resize(){let r=cv.getBoundingClientRect();if(!r.width||!r.height)return;renderer.setSize(r.width,r.height,false);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()}new ResizeObserver(resize).observe(cv);resize();cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,ry:group.rotation.y,rx:group.rotation.x};cv.setPointerCapture(e.pointerId)});cv.addEventListener('pointermove',e=>{if(drag){group.rotation.y=drag.ry+(e.clientX-drag.x)*.008;group.rotation.x=drag.rx+(e.clientY-drag.y)*.008}});cv.addEventListener('pointerup',()=>drag=null);cv.addEventListener('pointercancel',()=>drag=null);$('rotate').onclick=()=>{rot=!rot;$('rotate').textContent=rot?'PAUSE ROTATION':'RESUME ROTATION'};$('reset').onclick=()=>{group.rotation.set(0,0,0);cam.position.set(0,.3,7);cam.lookAt(0,0,0)};function frame(){requestAnimationFrame(frame);if(rot&&!drag)group.rotation.y+=.003;renderer.render(scene,cam)}frame()}catch(e){log('3D renderer error: '+e.message)}
+log('H.I. Recon Mk I ready.');
+// Register the PWA service worker on the hosted HTTPS site.
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
+      console.warn('Service worker registration failed:', err);
+    });
+  });
 }
-if('speechSynthesis' in window){chooseJarvisVoice();speechSynthesis.addEventListener?.('voiceschanged',chooseJarvisVoice)}
-function say(s){$('message').textContent=s;$('state').textContent='JARVIS RESPONDING';if('speechSynthesis'in window){speechSynthesis.cancel();chooseJarvisVoice();let u=new SpeechSynthesisUtterance(s);u.lang='en-GB';if(jarvisVoice)u.voice=jarvisVoice;u.rate=.89;u.pitch=.78;u.volume=1;u.onend=()=>$('state').textContent='AWAITING INPUT';speechSynthesis.speak(u)}log('JARVIS: '+s)}
-let stream=null,model=null;
-async function start(){try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});$('video').srcObject=stream;await $('video').play();$('placeholder').hidden=true;$('camState').textContent='CAMERA ONLINE';$('camera').textContent='STOP CAMERA';$('detect').disabled=false;$('sys').textContent='OPTICAL FEED ACTIVE';log('Camera permission granted.');say('Optical feed is online.');if(!model&&window.cocoSsd){$('detections').textContent='Loading object detection model…';try{model=await cocoSsd.load();$('detections').textContent='Model ready. Tap Detect Objects.';log('Object model loaded.')}catch(e){$('detections').textContent='Model failed to load; check internet.';log('Model load failed.')}}}catch(e){log('Camera error: '+e.message);say('I could not access the camera. Check browser permissions and use the secure hosted page.')}}
-function stop(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('video').srcObject=null;$('placeholder').hidden=false;$('camState').textContent='CAMERA OFFLINE';$('camera').textContent='ACTIVATE CAMERA';$('detect').disabled=true;$('overlay').getContext('2d').clearRect(0,0,$('overlay').width,$('overlay').height);$('sys').textContent='SYSTEM STANDBY';log('Camera stopped.')}
-async function detect(){if(!model){say('Object detection model is not ready. Check the internet connection.');return}let v=$('video'),c=$('overlay'),ctx=c.getContext('2d');if(!v.videoWidth)return;c.width=v.videoWidth;c.height=v.videoHeight;try{let ps=await model.detect(v);ctx.clearRect(0,0,c.width,c.height);ctx.lineWidth=3;ctx.font='18px sans-serif';ctx.strokeStyle='#54dcff';for(let p of ps.filter(p=>p.score>.45)){let [x,y,w,h]=p.bbox;ctx.strokeRect(x,y,w,h);ctx.fillStyle='#54dcff';ctx.fillRect(x,y-23,ctx.measureText(p.class).width+70,23);ctx.fillStyle='#03111c';ctx.fillText(p.class+' '+Math.round(p.score*100)+'%',x+4,y-6)}$('detections').textContent=ps.length?ps.filter(p=>p.score>.45).map(p=>p.class+' — '+Math.round(p.score*100)+'%').join(' · '):'No known objects detected in this frame.';log('Detection completed. '+ps.length+' candidate(s).')}catch(e){log('Detection error: '+e.message)}}
-$('camera').onclick=()=>stream?stop():start();$('detect').onclick=detect;
-$('speak').onclick=()=>say('Good day, Harsh. HI RECON Mark One is operational. This is a prototype interface. Object detection needs camera permission and internet access.');
-function listen(){let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){say('Voice recognition is not supported here. Use the buttons instead.');return}let r=new SR();r.lang='en-IN';$('state').textContent='LISTENING';r.onresult=e=>{let s=e.results[0][0].transcript.toLowerCase();log('Command: '+s);if(s.includes('start camera')){if(!stream)start();else say('Camera is already online.')}else if(s.includes('stop camera')){stop();say('Optical feed stopped.')}else if(s.includes('scan')||s.includes('detect')){detect();say('Running object detection on the current frame.')}else if(s.includes('model')||s.includes('3d')){ $('three').scrollIntoView({behavior:'smooth',block:'center'});say('Spatial display selected. This is a demo mannequin, not a real body scan.')}else if(s.includes('status'))say('System report. Camera '+(stream?'online':'offline')+'. Object model '+(model?'ready':'not loaded')+'. Spatial display shows a demo mannequin.');else say('Command not recognised. Try start camera, stop camera, scan objects, show 3D model, or status report.')};r.onerror=e=>log('Voice recognition issue: '+e.error);r.onend=()=>$('state').textContent='AWAITING INPUT';r.start()}
-$('listen').onclick=listen;$('voice').onclick=listen;$('clear').onclick=()=>logBox.replaceChildren();
-// Interactive holographic human-shaped procedural mesh. It is a stylized visualization, not a scan.
-const cv=$('three'),renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
-renderer.setClearColor(0x000000,0);
-const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(34,1,.1,100);
-cam.position.set(0,.72,6.8);cam.lookAt(0,.25,0);
-scene.add(new THREE.AmbientLight(0x68eaff,2.0));
-const light=new THREE.PointLight(0x45eaff,24);light.position.set(2,3,4);scene.add(light);
-const rim=new THREE.PointLight(0x087fff,16);rim.position.set(-3,0,-2);scene.add(rim);
-const g=new THREE.Group();scene.add(g);
-const surface=new THREE.MeshBasicMaterial({color:0x18c9e8,transparent:true,opacity:.10,side:THREE.DoubleSide,depthWrite:false});
-const wire=new THREE.MeshBasicMaterial({color:0x69f5ff,wireframe:true,transparent:true,opacity:.78});
-const brightWire=new THREE.MeshBasicMaterial({color:0xc1ffff,wireframe:true,transparent:true,opacity:.92});
-function ellipsoid(x,y,z,sx,sy,sz,detail=20,mat=surface){
- const geo=new THREE.SphereGeometry(1,detail,Math.max(12,Math.round(detail*.7)));
- const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);g.add(m);
- const w=new THREE.Mesh(geo,mat===brightWire?wire:wire);w.position.copy(m.position);w.scale.copy(m.scale);g.add(w);return m;
-}
-function segment(a,b,r1,r2,detail=12){
- const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),d=new THREE.Vector3().subVectors(B,A),len=d.length();
- const geo=new THREE.CylinderGeometry(r2,r1,len,detail,2,true);
- const m=new THREE.Mesh(geo,surface);m.position.copy(A).add(B).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());g.add(m);
- const w=new THREE.Mesh(geo,wire);w.position.copy(m.position);w.quaternion.copy(m.quaternion);g.add(w);
- // A few luminous transverse contour rings make the volume read as a projected mesh.
- const ringGeo=new THREE.TorusGeometry((r1+r2)*.5,.004,4,24);
- for(const t of [.18,.5,.82]){const ring=new THREE.Mesh(ringGeo,new THREE.MeshBasicMaterial({color:0x9bfbff,transparent:true,opacity:.55}));ring.position.copy(A).lerp(B,t);ring.quaternion.copy(m.quaternion);g.add(ring)}
-}
-function joint(p,r){ellipsoid(p[0],p[1],p[2],r,r,r,14,brightWire)}
-// Head, neck, shoulder girdle and anatomically proportioned torso.
-ellipsoid(0,1.63,0,.205,.285,.19,24);
-ellipsoid(0,1.78,-.012,.18,.075,.17,20,brightWire); // brow / cranial contour
-segment([0,1.38,0],[0,1.49,0],.09,.105);
-ellipsoid(0,1.06,0,.30,.39,.18,24); // chest
-ellipsoid(0,.78,.008,.245,.30,.15,24); // rib cage to waist
-ellipsoid(0,.48,0,.265,.22,.16,20); // pelvis
-// Collar bones and shoulder caps.
-segment([-.31,1.30,0],[0,1.34,.01],.055,.045);
-segment([0,1.34,.01],[.31,1.30,0],.045,.055);
-ellipsoid(-.35,1.27,0,.13,.14,.13,18);ellipsoid(.35,1.27,0,.13,.14,.13,18);
-// Arms are built as connected tapered segments with joints.
-for(const side of [-1,1]){
- const sh=[side*.39,1.24,0],el=[side*.53,.86,.015],wr=[side*.59,.48,.035],hand=[side*.61,.31,.045];
- segment(sh,el,.105,.078);segment(el,wr,.078,.052);segment(wr,hand,.052,.04);
- joint(sh,.105);joint(el,.075);joint(wr,.05);
- ellipsoid(hand[0],hand[1],hand[2],.055,.095,.045,14);
- // Legs with thigh, knee, calf, ankle and foot volumes.
- const hip=[side*.145,.40,0],knee=[side*.17,-.20,.015],ankle=[side*.18,-.79,.035],foot=[side*.18,-.91,.13];
- segment(hip,knee,.135,.085,16);segment(knee,ankle,.085,.052,14);
- joint(hip,.11);joint(knee,.071);joint(ankle,.05);
- ellipsoid(foot[0],foot[1],foot[2],.085,.055,.16,16);
-}
-// A fine centerline and shoulder/hip tracking arcs emphasize the projected scan aesthetic.
-function arc(radius,y,start,length,color=0x35eaff){
- const curve=new THREE.EllipseCurve(0,0,radius,radius,start,start+length,false,0);
- const pts=curve.getPoints(100).map(p=>new THREE.Vector3(p.x,y,p.y));
- const geo=new THREE.BufferGeometry().setFromPoints(pts);
- const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color,transparent:true,opacity:.68}));g.add(line);
-}
-arc(.48,1.26,Math.PI*.08,Math.PI*.84);arc(.33,.43,Math.PI*.12,Math.PI*.76,0x8ffaff);
-const centerGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,-.82,.02),new THREE.Vector3(0,1.88,.02)]);
-g.add(new THREE.Line(centerGeo,new THREE.LineBasicMaterial({color:0x72f5ff,transparent:true,opacity:.38})));
-let grid=new THREE.GridHelper(4,24,0x168db5,0x0b3b55);grid.position.y=-1.25;scene.add(grid);let rotating=true,drag=false,px=0,py=0;cv.onpointerdown=e=>{drag=true;px=e.clientX;py=e.clientY;cv.setPointerCapture(e.pointerId)};cv.onpointermove=e=>{if(drag){g.rotation.y+=(e.clientX-px)*.01;g.rotation.x+=(e.clientY-py)*.006;px=e.clientX;py=e.clientY}};cv.onpointerup=cv.onpointercancel=()=>drag=false;
-function resize(){let w=cv.clientWidth||320,h=cv.clientHeight||230;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}new ResizeObserver(resize).observe(cv);resize();function frame(){requestAnimationFrame(frame);if(rotating&&!drag)g.rotation.y+=.003;renderer.render(scene,cam)}frame();
-$('rotate').onclick=()=>{rotating=!rotating;$('rotate').textContent=rotating?'PAUSE ROTATION':'RESUME ROTATION'};$('reset').onclick=()=>{g.rotation.set(0,0,0);cam.position.set(0,.72,6.8);cam.lookAt(0,.25,0)};log('HI RECON Mk I HUD 3.0 initialized.');log('Camera frames are not uploaded by this app code. Third-party browser libraries have their own terms.');if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
